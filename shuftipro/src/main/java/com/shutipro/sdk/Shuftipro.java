@@ -7,6 +7,9 @@ import com.shutipro.sdk.activities.ShuftiVerifyActivity;
 import com.shutipro.sdk.constants.Constants;
 import com.shutipro.sdk.helpers.IntentHelper;
 import com.shutipro.sdk.listeners.ShuftiVerifyListener;
+import com.shutipro.sdk.models.AddressVerification;
+import com.shutipro.sdk.models.DocumentVerification;
+import com.shutipro.sdk.models.FaceVerification;
 import com.shutipro.sdk.models.ShuftiVerificationRequestModel;
 
 public class Shuftipro {
@@ -15,6 +18,10 @@ public class Shuftipro {
     private String clientId;
     private String secretKey;
     private boolean async;
+
+    private FaceVerification faceVerification;
+    private DocumentVerification documentVerification;
+    private AddressVerification addressVerification;
 
     private Shuftipro(String clientId, String secretKey, boolean async){
         this.clientId = clientId;
@@ -29,14 +36,9 @@ public class Shuftipro {
 
         return shuftipro;
     }
-    public void shuftiproVerification(String reference, String country, String language, String email, String callback_url, String redirect_url,
-                                      boolean isToMakeFaceVerification,
-                                      boolean isToPerformDocumentationVerification, boolean isSupportPassportType,
-                                      boolean isSupportDocIdCardType, boolean isSupportDrivingLicenseType, boolean isSupportCreditCardType, boolean documentName,
-                                      boolean dob, boolean documentNumber, boolean expiryDate, boolean issueDate,
-                                      boolean isToPerformAddressVerification,
-                                      boolean fullAddress, boolean addressDocumentName, boolean isUtilityBillSupportedType, boolean isIdCardSupportedType,
-                                      boolean isBankStatementSupportedType,
+
+    public void shuftiproVerification(String reference, String country, String language, String email, String callbackUrl, String redirectUrl,
+                                      FaceVerification faceVerification, DocumentVerification documentVerification, AddressVerification addressVerification,
                                       Activity parentActivity, ShuftiVerifyListener shuftiVerifyListener){
 
         ShuftiVerificationRequestModel verificationRequestModel = new ShuftiVerificationRequestModel();
@@ -46,31 +48,12 @@ public class Shuftipro {
         verificationRequestModel.setCountry(country);
         verificationRequestModel.setLanguage(language);
         verificationRequestModel.setEmail(email);
-        verificationRequestModel.setCallback_url(callback_url);
-        verificationRequestModel.setRedirect_url(redirect_url);
+        verificationRequestModel.setCallbackUrl(callbackUrl);
+        verificationRequestModel.setRedirectUrl(redirectUrl);
 
-        //Starting face verification object
-        verificationRequestModel.setToMakeFaceVerification(isToMakeFaceVerification);
-
-        //Starting document verification object
-        verificationRequestModel.setToPerformDocumentationVerification(isToPerformDocumentationVerification);
-        verificationRequestModel.setSupportPassportType(isSupportPassportType);
-        verificationRequestModel.setSupportDocIdCardType(isSupportDocIdCardType);
-        verificationRequestModel.setSupportDrivingLicenseType(isSupportDrivingLicenseType);
-        verificationRequestModel.setSupportCreditCardType(isSupportCreditCardType);
-        verificationRequestModel.setDocumentName(documentName);
-        verificationRequestModel.setDob(dob);
-        verificationRequestModel.setDocumentNumber(documentNumber);
-        verificationRequestModel.setExpiryDate(expiryDate);
-        verificationRequestModel.setIssueDate(issueDate);
-
-        //Starting address verification object
-        verificationRequestModel.setToPerformAddressVerification(isToPerformAddressVerification);
-        verificationRequestModel.setFullAddress(fullAddress);
-        verificationRequestModel.setAddressDocumentName(addressDocumentName);
-        verificationRequestModel.setUtilityBillSupportedType(isUtilityBillSupportedType);
-        verificationRequestModel.setIdCardSupportedType(isIdCardSupportedType);
-        verificationRequestModel.setBankStatementSupportedType(isBankStatementSupportedType);
+        verificationRequestModel.setFaceVerification(faceVerification);
+        verificationRequestModel.setDocumentVerification(documentVerification);
+        verificationRequestModel.setAddressVerification(addressVerification);
 
         verificationRequestModel.setShuftiVerifyListener(shuftiVerifyListener);
         verificationRequestModel.setAsyncRequest(async);

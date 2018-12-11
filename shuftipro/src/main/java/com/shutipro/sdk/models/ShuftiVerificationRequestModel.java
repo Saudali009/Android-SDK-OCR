@@ -12,28 +12,11 @@ public class ShuftiVerificationRequestModel {
     private String country;
     private String language;
     private String email;
-    private String callback_url;
-    private String redirect_url;
-    private boolean isToMakeFaceVerification;
-
-    private boolean isToPerformDocumentationVerification;
-    private boolean isSupportPassportType;
-    private boolean isSupportDocIdCardType;
-    private boolean isSupportDrivingLicenseType;
-    private boolean isSupportCreditCardType;
-
-    private boolean documentName;
-    private boolean dob;
-    private boolean documentNumber;
-    private boolean expiryDate;
-    private boolean issueDate;
-
-    private boolean isToPerformAddressVerification;
-    private boolean isUtilityBillSupportedType;
-    private boolean isIdCardSupportedType;
-    private boolean isBankStatementSupportedType;
-    private boolean fullAddress;
-    private boolean addressDocumentName;
+    private String callbackUrl;
+    private String redirectUrl;
+    private FaceVerification faceVerification;
+    private DocumentVerification documentVerification;
+    private AddressVerification addressVerification;
 
     private Activity parentActivity;
     private ShuftiVerifyListener shuftiVerifyListener;
@@ -42,41 +25,19 @@ public class ShuftiVerificationRequestModel {
     public ShuftiVerificationRequestModel() {
     }
 
-    public ShuftiVerificationRequestModel(String reference, String country, String language, String email, String callback_url, String redirect_url,
-                                          boolean isToMakeFaceVerification,
-                                          boolean isToPerformDocumentationVerification, boolean isSupportPassportType,
-                                          boolean isSupportDocIdCardType, boolean isSupportDrivingLicenseType, boolean isSupportCreditCardType, boolean documentName,
-                                          boolean dob, boolean documentNumber, boolean expiryDate, boolean issueDate,
-                                          boolean isToPerformAddressVerification,
-                                          boolean fullAddress, boolean addressDocumentName, boolean isUtilityBillSupportedType, boolean isIdCardSupportedType,
-                                          boolean isBankStatementSupportedType,
+    public ShuftiVerificationRequestModel(String reference, String country, String language, String email, String callbackUrl, String redirectUrl,
+                                          FaceVerification faceVerification, DocumentVerification documentVerification, AddressVerification addressVerification,
                                           Activity parentActivity, ShuftiVerifyListener shuftiVerifyListener, boolean asyncRequest) {
         this.reference = reference;
         this.country = country;
         this.language = language;
         this.email = email;
-        this.callback_url = callback_url;
-        this.redirect_url = redirect_url;
-        this.isToMakeFaceVerification = isToMakeFaceVerification;
+        this.callbackUrl = callbackUrl;
+        this.redirectUrl = redirectUrl;
 
-        this.isToPerformDocumentationVerification = isToPerformDocumentationVerification;
-        this.isSupportPassportType = isSupportPassportType;
-        this.isSupportDocIdCardType = isSupportDocIdCardType;
-        this.isSupportDrivingLicenseType = isSupportDrivingLicenseType;
-        this.isSupportCreditCardType = isSupportCreditCardType;
-        this.documentName = documentName;
-        this.dob = dob;
-        this.documentNumber = documentNumber;
-        this.expiryDate = expiryDate;
-        this.issueDate = issueDate;
-
-        this.isToPerformAddressVerification = isToPerformAddressVerification;
-        this.fullAddress = fullAddress;
-        this.addressDocumentName = addressDocumentName ;
-        this.isUtilityBillSupportedType = isUtilityBillSupportedType;
-        this.isIdCardSupportedType = isIdCardSupportedType;
-        this.isBankStatementSupportedType = isBankStatementSupportedType;
-
+        this.faceVerification = faceVerification;
+        this.documentVerification = documentVerification;
+        this.addressVerification = addressVerification;
         this.parentActivity = parentActivity;
         this.shuftiVerifyListener = shuftiVerifyListener;
         this.asyncRequest = asyncRequest;
@@ -130,156 +91,44 @@ public class ShuftiVerificationRequestModel {
         this.email = email;
     }
 
-    public String getCallback_url() {
-        return callback_url;
+    public String getCallbackUrl() {
+        return callbackUrl;
     }
 
-    public void setCallback_url(String callback_url) {
-        this.callback_url = callback_url;
+    public void setCallbackUrl(String callbackUrl) {
+        this.callbackUrl = callbackUrl;
     }
 
-    public String getRedirect_url() {
-        return redirect_url;
+    public String getRedirectUrl() {
+        return redirectUrl;
     }
 
-    public void setRedirect_url(String redirect_url) {
-        this.redirect_url = redirect_url;
+    public void setRedirectUrl(String redirectUrl) {
+        this.redirectUrl = redirectUrl;
     }
 
-    public boolean isToMakeFaceVerification() {
-        return isToMakeFaceVerification;
+    public FaceVerification getFaceVerification() {
+        return faceVerification;
     }
 
-    public void setToMakeFaceVerification(boolean toMakeFaceVerification) {
-        isToMakeFaceVerification = toMakeFaceVerification;
+    public void setFaceVerification(FaceVerification faceVerification) {
+        this.faceVerification = faceVerification;
     }
 
-    public boolean isToPerformDocumentationVerification() {
-        return isToPerformDocumentationVerification;
+    public DocumentVerification getDocumentVerification() {
+        return documentVerification;
     }
 
-    public void setToPerformDocumentationVerification(boolean toPerformDocumentationVerification) {
-        isToPerformDocumentationVerification = toPerformDocumentationVerification;
+    public void setDocumentVerification(DocumentVerification documentVerification) {
+        this.documentVerification = documentVerification;
     }
 
-    public boolean isSupportPassportType() {
-        return isSupportPassportType;
+    public AddressVerification getAddressVerification() {
+        return addressVerification;
     }
 
-    public void setSupportPassportType(boolean supportPassportType) {
-        isSupportPassportType = supportPassportType;
-    }
-
-    public boolean isSupportDocIdCardType() {
-        return isSupportDocIdCardType;
-    }
-
-    public void setSupportDocIdCardType(boolean supportDocIdCardType) {
-        isSupportDocIdCardType = supportDocIdCardType;
-    }
-
-    public boolean isSupportDrivingLicenseType() {
-        return isSupportDrivingLicenseType;
-    }
-
-    public void setSupportDrivingLicenseType(boolean supportDrivingLicenseType) {
-        isSupportDrivingLicenseType = supportDrivingLicenseType;
-    }
-
-    public boolean isSupportCreditCardType() {
-        return isSupportCreditCardType;
-    }
-
-    public void setSupportCreditCardType(boolean supportCreditCardType) {
-        isSupportCreditCardType = supportCreditCardType;
-    }
-
-    public boolean isDocumentName() {
-        return documentName;
-    }
-
-    public void setDocumentName(boolean documentName) {
-        this.documentName = documentName;
-    }
-
-    public boolean isDob() {
-        return dob;
-    }
-
-    public void setDob(boolean dob) {
-        this.dob = dob;
-    }
-
-    public boolean isDocumentNumber() {
-        return documentNumber;
-    }
-
-    public void setDocumentNumber(boolean documentNumber) {
-        this.documentNumber = documentNumber;
-    }
-
-    public boolean isExpiryDate() {
-        return expiryDate;
-    }
-
-    public void setExpiryDate(boolean expiryDate) {
-        this.expiryDate = expiryDate;
-    }
-
-    public boolean isIssueDate() {
-        return issueDate;
-    }
-
-    public void setIssueDate(boolean issueDate) {
-        this.issueDate = issueDate;
-    }
-
-    public boolean isToPerformAddressVerification() {
-        return isToPerformAddressVerification;
-    }
-
-    public void setToPerformAddressVerification(boolean toPerformAddressVerification) {
-        isToPerformAddressVerification = toPerformAddressVerification;
-    }
-
-    public boolean isUtilityBillSupportedType() {
-        return isUtilityBillSupportedType;
-    }
-
-    public void setUtilityBillSupportedType(boolean utilityBillSupportedType) {
-        isUtilityBillSupportedType = utilityBillSupportedType;
-    }
-
-    public boolean isIdCardSupportedType() {
-        return isIdCardSupportedType;
-    }
-
-    public void setIdCardSupportedType(boolean idCardSupportedType) {
-        isIdCardSupportedType = idCardSupportedType;
-    }
-
-    public boolean isBankStatementSupportedType() {
-        return isBankStatementSupportedType;
-    }
-
-    public void setBankStatementSupportedType(boolean bankStatementSupportedType) {
-        isBankStatementSupportedType = bankStatementSupportedType;
-    }
-
-    public boolean isFullAddress() {
-        return fullAddress;
-    }
-
-    public void setFullAddress(boolean fullAddress) {
-        this.fullAddress = fullAddress;
-    }
-
-    public boolean isAddressDocumentName() {
-        return addressDocumentName;
-    }
-
-    public void setAddressDocumentName(boolean addressDocumentName) {
-        this.addressDocumentName = addressDocumentName;
+    public void setAddressVerification(AddressVerification addressVerification) {
+        this.addressVerification = addressVerification;
     }
 
     public Activity getParentActivity() {

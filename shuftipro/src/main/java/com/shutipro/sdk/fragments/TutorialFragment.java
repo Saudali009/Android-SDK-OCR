@@ -32,30 +32,25 @@ public class TutorialFragment extends Fragment {
     private Context mContext;
     private TutorialStateFragment tutorialStateFragment;
     private int curentState = 0;
-    private final int CAMERA_PERMISSION_REQUEST_CODE = 1;
-    private CountDownTimer countDownTimer;
     private final int REQUEST_ID_MULTIPLE_PERMISSIONS = 100;
 
     //Adding new views to handle the supported types of selection
-    private TextView headingTextView, supportedTypesTextView,instructionHeadingTextView,instructionTextView;
-    private boolean docIdCard = false,docPassport = false,docDrivingLicense = false,docCreditCard = false,addressIdCard = false,
-            addressUtilityBills = false,addressBankStatement = false;
+    private TextView headingTextView, supportedTypesTextView, instructionHeadingTextView, instructionTextView;
+    private boolean docIdCard = false, docPassport = false, docDrivingLicense = false, docCreditCard = false, addressIdCard = false,
+            addressUtilityBills = false, addressBankStatement = false;
 
-    //Adding runtime permissions
-    private static final int REQUEST_CAMERA_PERMISSION = 110 , REQUEST_WRITE_STORAGE = 111, REQUEST_AUDIO_RECORDING = 112;
-
-    public static TutorialFragment newInstance(int currentState,boolean docIdCard,boolean docPassport,boolean docDrivingLicense,boolean docCreditCard,
-                                               boolean addressIdCard, boolean addressUtilityBills, boolean addressBankStatement){
+    public static TutorialFragment newInstance(int currentState, boolean docIdCard, boolean docPassport, boolean docDrivingLicense, boolean docCreditCard,
+                                               boolean addressIdCard, boolean addressUtilityBills, boolean addressBankStatement) {
         TutorialFragment fragment = new TutorialFragment();
         Bundle bundle = new Bundle();
-        bundle.putInt("currentState",currentState);
-        bundle.putBoolean("docIdCard",docIdCard);
-        bundle.putBoolean("docPassport",docPassport);
-        bundle.putBoolean("docDrivingLicense",docDrivingLicense);
-        bundle.putBoolean("docCreditCard",docCreditCard);
-        bundle.putBoolean("addressIdCard",addressIdCard);
-        bundle.putBoolean("addressUtilityBills",addressUtilityBills);
-        bundle.putBoolean("addressBankStatement",addressBankStatement);
+        bundle.putInt("currentState", currentState);
+        bundle.putBoolean("docIdCard", docIdCard);
+        bundle.putBoolean("docPassport", docPassport);
+        bundle.putBoolean("docDrivingLicense", docDrivingLicense);
+        bundle.putBoolean("docCreditCard", docCreditCard);
+        bundle.putBoolean("addressIdCard", addressIdCard);
+        bundle.putBoolean("addressUtilityBills", addressUtilityBills);
+        bundle.putBoolean("addressBankStatement", addressBankStatement);
         fragment.setArguments(bundle);
         return fragment;
     }
@@ -70,7 +65,7 @@ public class TutorialFragment extends Fragment {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
 
-        View view = inflater.inflate(R.layout.fragment_tutorial,container,false);
+        View view = inflater.inflate(R.layout.fragment_tutorial, container, false);
         mContext = getActivity();
         btnTakePicture = view.findViewById(R.id.btn_capture);
         ivTutorialImage = view.findViewById(R.id.iv_tut_image);
@@ -84,15 +79,15 @@ public class TutorialFragment extends Fragment {
 
         //Get current state of tutorial
         Bundle bundle = getArguments();
-        if (bundle != null){
-            curentState = bundle.getInt("currentState",0);
-            docIdCard = bundle.getBoolean("docIdCard",false);
-            docPassport = bundle.getBoolean("docPassport",false);
-            docDrivingLicense = bundle.getBoolean("docDrivingLicense",false);
-            docCreditCard = bundle.getBoolean("docCreditCard",false);
-            addressIdCard = bundle.getBoolean("addressIdCard",addressIdCard);
-            addressUtilityBills = bundle.getBoolean("addressUtilityBills",false);
-            addressBankStatement = bundle.getBoolean("addressBankStatement",false);
+        if (bundle != null) {
+            curentState = bundle.getInt("currentState", 0);
+            docIdCard = bundle.getBoolean("docIdCard", false);
+            docPassport = bundle.getBoolean("docPassport", false);
+            docDrivingLicense = bundle.getBoolean("docDrivingLicense", false);
+            docCreditCard = bundle.getBoolean("docCreditCard", false);
+            addressIdCard = bundle.getBoolean("addressIdCard", addressIdCard);
+            addressUtilityBills = bundle.getBoolean("addressUtilityBills", false);
+            addressBankStatement = bundle.getBoolean("addressBankStatement", false);
         }
 
         //Start the count down to open camera after seconds
@@ -102,19 +97,14 @@ public class TutorialFragment extends Fragment {
         btnTakePicture.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                if (tutorialStateFragment != null){
+                if (tutorialStateFragment != null) {
 
-                    if(countDownTimer != null){
-                        countDownTimer.cancel();
-                        countDownTimer = null;
-                    }
                     tutorialStateFragment.captureVideo(curentState);
                 }
-
             }
         });
 
-        if(tutorialStateFragment != null){
+        if (tutorialStateFragment != null) {
             curentState = tutorialStateFragment.getTypeofTutorial();
         }
 
@@ -128,7 +118,7 @@ public class TutorialFragment extends Fragment {
         return view;
     }
 
-    private boolean checkPermissions(){
+    private boolean checkPermissions() {
 
         int permissionCamera = ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.CAMERA);
         int permissionStorage = ContextCompat.checkSelfPermission(getActivity(), Manifest.permission.WRITE_EXTERNAL_STORAGE);
@@ -146,33 +136,33 @@ public class TutorialFragment extends Fragment {
         }
 
         if (!listPermissionsNeeded.isEmpty()) {
-            ActivityCompat.requestPermissions(getActivity(), listPermissionsNeeded.toArray(new String[listPermissionsNeeded.size()]),REQUEST_ID_MULTIPLE_PERMISSIONS);
+            ActivityCompat.requestPermissions(getActivity(), listPermissionsNeeded.toArray(new String[listPermissionsNeeded.size()]), REQUEST_ID_MULTIPLE_PERMISSIONS);
             return false;
         }
         return true;
     }
 
-    public void setTutorialFragmentCB(TutorialStateFragment tutorialStateFragment){
+    public void setTutorialFragmentCB(TutorialStateFragment tutorialStateFragment) {
         this.tutorialStateFragment = tutorialStateFragment;
     }
 
-    public void playTutorialSound(){
+    public void playTutorialSound() {
         switch (curentState) {
             case Constants.CODE_SELFIE:
                 ivTutorialImage.setImageResource(R.drawable.face_image);
-                headingTextView.setText("Face Verification");
+                headingTextView.setText(getString(R.string.face_verification));
                 supportedTypesTextView.setVisibility(View.GONE);
-                instructionHeadingTextView.setText("Capture your Face Video");
-                instructionTextView.setText("Remove all accessories (e.g. glasses)");
+                instructionHeadingTextView.setText(getString(R.string.capture_face_video));
+                instructionTextView.setText(getString(R.string.remove_accessories));
                 break;
 
             case Constants.CODE_DOCUMENT:
                 ivTutorialImage.setImageResource(R.drawable.document_image);
-                headingTextView.setText("Documentation Verification");
+                headingTextView.setText(getString(R.string.document_verification));
                 supportedTypesTextView.setVisibility(View.VISIBLE);
-                supportedTypesTextView.setText("Supported Types");
-                instructionHeadingTextView.setText("Capture Document Video");
-                instructionTextView.setText("Ensure the text is visible (hold document steady)");
+                supportedTypesTextView.setText(getString(R.string.supported_types));
+                instructionHeadingTextView.setText(getString(R.string.capture_document));
+                instructionTextView.setText(getString(R.string.hold_doc_steady));
 
                 //Handling supported types selected
                 supportedTypesTextView.setVisibility(View.VISIBLE);
@@ -182,11 +172,11 @@ public class TutorialFragment extends Fragment {
 
             case Constants.CODE_ADDRESS:
                 ivTutorialImage.setImageResource(R.drawable.address_image);
-                headingTextView.setText("Address Verification");
+                headingTextView.setText(getString(R.string.address_verification));
                 supportedTypesTextView.setVisibility(View.VISIBLE);
-                supportedTypesTextView.setText("Supported Types");
-                instructionHeadingTextView.setText("Capture Address Document Video");
-                instructionTextView.setText("Ensure the address is visible");
+                supportedTypesTextView.setText(getString(R.string.supported_types));
+                instructionHeadingTextView.setText(getString(R.string.capture_address_document));
+                instructionTextView.setText(getString(R.string.ensure_address_visible));
 
                 //Handling supported types selected
                 supportedTypesTextView.setVisibility(View.VISIBLE);
@@ -197,9 +187,9 @@ public class TutorialFragment extends Fragment {
             case Constants.CODE_CONSENT:
                 supportedTypesTextView.setVisibility(View.GONE);
                 ivTutorialImage.setImageResource(R.drawable.consent_image);
-                headingTextView.setText("Consent Verification");
-                instructionHeadingTextView.setText("Capture Consent Document Video");
-                instructionTextView.setText("Ensure the text is visible (hold document steady)");
+                headingTextView.setText(getString(R.string.consent_verification));
+                instructionHeadingTextView.setText(getString(R.string.capture_consent_document));
+                instructionTextView.setText(getString(R.string.hold_doc_steady));
                 break;
         }
 
@@ -207,72 +197,45 @@ public class TutorialFragment extends Fragment {
 
     private String getSelectedDocumentSupportedTypes() {
         ArrayList<String> document_supported_types = new ArrayList<String>();
-        if (docIdCard){
+        if (docIdCard) {
             document_supported_types.add("ID Card");
         }
-        if (docPassport){
+        if (docPassport) {
             document_supported_types.add("Passport");
         }
-        if (docDrivingLicense){
+        if (docDrivingLicense) {
             document_supported_types.add("Driving Licence");
         }
-        if (docCreditCard){
+        if (docCreditCard) {
             document_supported_types.add("Credit/Debit");
         }
-        return "(" + TextUtils.join(",",document_supported_types) + ")";
+        return "(" + TextUtils.join(",", document_supported_types) + ")";
     }
 
 
     private String getSelectedAddressSupportedTypes() {
         ArrayList<String> address_supported_types = new ArrayList<String>();
 
-        String types = "(";
-        if (addressIdCard){
+        if (addressIdCard) {
             address_supported_types.add("ID Card");
         }
-        if (addressUtilityBills){
+        if (addressUtilityBills) {
             address_supported_types.add("Utility Bills");
         }
-        if (addressBankStatement){
+        if (addressBankStatement) {
             address_supported_types.add("Bank Statements");
         }
-        return "(" + TextUtils.join(",",address_supported_types) + ")";
-    }
-
-
-    private void startCountDown(){
-
-        if(countDownTimer == null){
-            countDownTimer = new CountDownTimer(1300,500) {
-                @Override
-                public void onTick(long l) {
-
-                }
-
-                @Override
-                public void onFinish() {
-
-                    if(TutorialFragment.this != null && tutorialStateFragment != null) {
-                        tutorialStateFragment.captureVideo(curentState);
-                    }
-                }
-            };
-
-            countDownTimer.start();
-        }
+        return "(" + TextUtils.join(",", address_supported_types) + ")";
     }
 
     @Override
     public void onDestroy() {
         super.onDestroy();
-        if(countDownTimer != null){
-            countDownTimer.cancel();
-        }
     }
 
-    public interface TutorialStateFragment{
+    public interface TutorialStateFragment {
         int getTypeofTutorial();
+
         void captureVideo(int state);
     }
-
 }

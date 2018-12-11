@@ -1,9 +1,11 @@
 package com.shutipro.sdk.cloud;
 
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
+import android.net.Uri;
 import android.os.AsyncTask;
 import android.util.Base64;
 import android.util.Log;
@@ -22,6 +24,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
@@ -32,6 +35,7 @@ public class HttpConnectionHandler {
     private boolean errorOccured = true;
     private String TAG = HttpConnectionHandler.class.getSimpleName();
     private static final String SHUFTIPRO_API_URL = "https://shuftipro.com/api/";
+    private static final String SDK_STACKTRACE_URL = "https://shuftipro.com/api/v3/sdk/error/report/";
     private String CLIENT_ID;
     private String SECRET_KEY;
     private InputStream inputStream = null;
@@ -322,4 +326,62 @@ public class HttpConnectionHandler {
         return out.toString();
     }
 
+    @SuppressLint("StaticFieldLeak")
+    public void sendStacktraceReport(final Context context, final String clientId, final String threadName, final String stackTrace,
+                                     final String message, final String deviceInformation, final String timeStamp) {
+        new AsyncTask<Void, Void, String>() {
+
+            @Override
+            protected String doInBackground(Void... voids) {
+                String resultResponse = "";
+                try {
+                    URL url = new URL(SDK_STACKTRACE_URL);
+                    HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+                    connection.setDoOutput(true);
+                    connection.setDoInput(true);
+                    connection.setAllowUserInteraction(false);
+                    connection.setRequestProperty("Connection", "Keep-Alive");
+                    connection.setConnectTimeout(9000);
+                    connection.setReadTimeout(9000);
+
+                    connection.setRequestMethod("POST");
+
+                    Uri.Builder builder = new Uri.Builder()
+                            .appendQueryParameter("clientId", clientId)
+                            .appendQueryParameter("threadName", threadName)
+                            .appendQueryParameter("stackTrace", stackTrace)
+                            .appendQueryParameter("message", message)
+                            .appendQueryParameter("deviceInformation", deviceInformation)
+                            .appendQueryParameter("timeStamp", timeStamp);
+
+                    String query = builder.build().getEncodedQuery();
+
+                    byte[] outputBytes = query.getBytes("UTF-8");
+
+                    OutputStream os = connection.getOutputStream();
+                    os.write(outputBytes);
+                    os.close();
+
+                    connection.connect();
+                    int responseCode = ((HttpURLConnection) connection).getResponseCode();
+                    if ((responseCode >= HttpURLConnection.HTTP_OK)
+                            && responseCode < 300) {
+                        inputStream = connection.getInputStream();
+                        ((Activity)context).finish();
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    return resultResponse;
+                }
+                return resultResponse;
+            }
+
+            @Override
+            protected void onPostExecute(String result) {
+                super.onPostExecute(result);
+                ShuftiVerifyActivity.getInstance().finish();
+            }
+
+        }.execute();
+    }
 }

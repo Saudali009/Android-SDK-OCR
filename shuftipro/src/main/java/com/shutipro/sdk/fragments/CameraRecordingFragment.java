@@ -52,10 +52,9 @@ import static android.provider.MediaStore.Files.FileColumns.MEDIA_TYPE_VIDEO;
  * A simple {@link Fragment} subclass.
  */
 
-public class CameraRecordingFragment extends Fragment {
+public class CameraRecordingFragment extends Fragment implements MediaRecorder.OnInfoListener {
     private static final String TAG = CameraRecordingFragment.class.getSimpleName();
     private static final int FOCUS_AREA_SIZE = 500;
-    private static final int CAMERA_PERMISSION_REQUEST_CODE = 100;
     private CountDownTimer countDownTimer;
     private TextView countDownTextView;
     private Camera mCamera;
@@ -65,7 +64,6 @@ public class CameraRecordingFragment extends Fragment {
     private static boolean flash = false;
     private long countUp;
     private Context mContext;
-    private int quality = CamcorderProfile.QUALITY_720P;
     private ImageView capture, switchCamera, buttonFlash, chronoRecordingImage;
     private LinearLayout cameraPreview;
     private Chronometer chronometer;
@@ -105,7 +103,6 @@ public class CameraRecordingFragment extends Fragment {
         }
 
         initialize();
-
         return view;
     }
 
@@ -291,7 +288,6 @@ public class CameraRecordingFragment extends Fragment {
     @Override
     public void onPause() {
         super.onPause();
-        // when on Pause, release camera in order to be used from other applications
         releaseCamera();
     }
 
@@ -390,7 +386,6 @@ public class CameraRecordingFragment extends Fragment {
         }
 
         countDownTimer.start();
-
     }
 
     private void stopCountDownTimer() {
@@ -409,7 +404,9 @@ public class CameraRecordingFragment extends Fragment {
             mediaRecorder.reset();
             mediaRecorder.release();
             mediaRecorder = null;
-            mCamera.lock();
+            if(mCamera != null){
+                mCamera.lock();
+            }
         }
     }
 
@@ -418,9 +415,10 @@ public class CameraRecordingFragment extends Fragment {
         mediaRecorder = new MediaRecorder();
 
         /*
-         * Adding Additional Camcoder check if front camera do not support HIGH quality.
+         * Adding additional camcorder check if front camera do not support high quality.
          * Set the default quality.
          * Additional quality issue check for the latest android version.
+         * Setting camcorder video encoding frame bit encoding to 3,000,000
          */
 
         CamcorderProfile profile = null;
@@ -453,7 +451,7 @@ public class CameraRecordingFragment extends Fragment {
         //mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
         //mediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.MPEG_4_SP);
         //mediaRecorder.setOutputFile(getOutPath(MEDIA_TYPE_VIDEO));
-        //mediaRecorder.setVideoEncodingBitRate(690000);  //Encription or compression of recorded video.
+        //mediaRecorder.setVideoEncodingBitRate(690000);
         //mediaRecorder.setVideoFrameRate(30);
 
         mediaRecorder.setVideoSource(MediaRecorder.VideoSource.CAMERA);
@@ -463,14 +461,21 @@ public class CameraRecordingFragment extends Fragment {
         mediaRecorder.setVideoEncoder(profile.videoCodec);
         mediaRecorder.setVideoEncodingBitRate(profile.videoBitRate);
         mediaRecorder.setVideoFrameRate(profile.videoFrameRate);
-        mediaRecorder.setOutputFile(getOutPath(MEDIA_TYPE_VIDEO));
 
-        //mediaRecorder.setVideoEncodingBitRate(3000000);
-        //mediaRecorder.setVideoSize(1280, 720);
+        try {
+            mediaRecorder.setOutputFile(createVideoFile());
+        } catch (IOException e) {
+            e.printStackTrace();
+            releaseMediaRecorder();
+            Toast.makeText(mContext, "Unable to create file.", Toast.LENGTH_SHORT).show();
+            getActivity().finish();
+        }
 
+        mediaRecorder.setVideoEncodingBitRate(3000000);
         mediaRecorder.setVideoSize(640, 480);
         mediaRecorder.setMaxDuration(CameraConfig.MAX_DURATION_RECORD); // Set max duration 10 sec.
         mediaRecorder.setMaxFileSize(CameraConfig.MAX_FILE_SIZE_RECORD); // Set max file size 20M.
+        mediaRecorder.setOnInfoListener(this);
 
         try {
             mediaRecorder.prepare();
@@ -482,7 +487,6 @@ public class CameraRecordingFragment extends Fragment {
             return false;
         }
         return true;
-
     }
 
     private void releaseCamera() {
@@ -566,6 +570,21 @@ public class CameraRecordingFragment extends Fragment {
         }
     };
 
+    private String createVideoFile() throws IOException {
+        String timeStamp = new SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(new Date());
+        String videoFileName = "MP4_" + timeStamp + "_";
+
+        File directory = mContext.getCacheDir();
+
+        File videoFile = File.createTempFile(
+                videoFileName,
+                ".mp4",
+                directory
+        );
+        videoFile.deleteOnExit();
+        return storagePath = videoFile.getPath();
+    }
+
     private String getOutPath(int mediaType) {
         String outputPath = null;
         File mediaStorageDir = new File(Environment.getExternalStoragePublicDirectory(
@@ -615,5 +634,46 @@ public class CameraRecordingFragment extends Fragment {
         bytes = output.toByteArray();
         encodedString = Base64.encodeToString(bytes, Base64.NO_WRAP);
         return encodedString;
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+    }
+
+    @Override
+    public void onInfo(MediaRecorder mr, int what, int extra) {
+
+        if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_FILESIZE_REACHED) {
+            Log.e(TAG, "Maximum File size Reached");
+            maxLimitReached();
+        }
+
+        if (what == MediaRecorder.MEDIA_RECORDER_INFO_MAX_DURATION_REACHED) {
+            Log.e(TAG, "Maximum Duration Reached");
+            maxLimitReached();
+        }
+
+
+        if (what == MediaRecorder.MEDIA_RECORDER_ERROR_UNKNOWN) {
+            Log.e(TAG, "Unknown error has occur.");
+        }
+    }
+
+    private void maxLimitReached(){
+        try {
+            mediaRecorder.stop();
+        } catch (Exception ex) {
+            ex.printStackTrace();
+        }
+        stopCountDownTimer();
+        changeRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_SENSOR);
+        releaseMediaRecorder();
+        recording = false;
+        String encodedStringBase64 = videoToBase64(new File(storagePath));
+
+        if (videoStateListener != null) {
+            videoStateListener.onVideoRecorded(new File(storagePath), encodedStringBase64);
+        }
     }
 }

@@ -2,6 +2,7 @@ package com.shutipro.sdk.activities;
 
 import android.Manifest;
 import android.app.AlertDialog;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
@@ -27,6 +28,7 @@ import com.shutipro.sdk.helpers.IntentHelper;
 import com.shutipro.sdk.listeners.NetworkListener;
 import com.shutipro.sdk.listeners.VideoListener;
 import com.shutipro.sdk.models.ShuftiVerificationRequestModel;
+import com.shutipro.sdk.utils.Utils;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -34,6 +36,7 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -47,7 +50,6 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
     private int currentState = 0;
     public static LinearLayout rlLoadingProgress;
     private HashMap<String, String> responseSet;
-    private TextView tvProgressLoading;
     private CameraRecordingFragment cameraFragment;
     private final String TAG = ShuftiVerifyActivity.class.getSimpleName();
     private ShuftiVerificationRequestModel shuftiVerificationRequestModel;
@@ -55,9 +57,14 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
     public static boolean requestInProcess = false;
     private final int REQUEST_ID_MULTIPLE_PERMISSIONS = 100;
     private AlertDialog alertDialog;
-    private boolean docIdCard = false, docPassport = false, docDrivingLicense = false, docCreditCard = false, addressIdCard = false,
-            addressUtilityBills = false, addressBankStatement = false;
+    private boolean docIdCard = false, docPassport = false, docDrivingLicense = false, docCreditCard = false,
+            addressIdCard = false, addressUtilityBills = false, addressBankStatement = false;
     private static ShuftiVerifyActivity instance = null;
+
+    private String[] documentSupportedTypes = new String[]{"id_card", "credit_or_debit_card", "passport", "driving_license"};
+    private String[] addressSupportedTypes = new String[]{"id_card", "utility_bill", "bank_statement"};
+
+    private boolean documentVerification = true, addressVerification = true;
 
     private boolean asyncRequest = false;
     private String reference = "";
@@ -70,10 +77,7 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         setContentView(R.layout.activity_shufti_verify);
 
-        //Set instance of this activtiy
         instance = this;
-
-        tvProgressLoading = findViewById(R.id.tv_title_verify);
 
         //Initializing UI elements
         rlLoadingProgress = findViewById(R.id.rl_progress_update);
@@ -84,74 +88,71 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
             shuftiVerificationRequestModel = (ShuftiVerificationRequestModel) IntentHelper.getInstance().getObject(Constants.KEY_DATA_MODEL);
         }
 
-        //Return callbacks incase of wrong parameters sending..
+        //Handling Stack trace on an exception
+        //Setting instance to handle the uncaught exceptions
+
+        Thread.setDefaultUncaughtExceptionHandler(new Thread.UncaughtExceptionHandler() {
+            @Override
+            public void uncaughtException(Thread paramThread, Throwable paramThrowable) {
+                String threadName = paramThread.getName();
+                String stackTrace = Arrays.toString(paramThread.getStackTrace());
+                String message = paramThrowable.getMessage();
+                String deviceInformation = Utils.getDeviceInformation();
+                String timeStamp = Utils.getCurrentTimeStamp();
+                String clientId = "";
+                if (shuftiVerificationRequestModel != null) {
+                    clientId = shuftiVerificationRequestModel.getClientId();
+                }
+
+                HttpConnectionHandler.getInstance(clientId, "", false)
+                        .sendStacktraceReport(ShuftiVerifyActivity.this, clientId, threadName, stackTrace, message, deviceInformation, timeStamp);
+            }
+        });
+
+        //Return callbacks in case of wrong parameters sending
         if (shuftiVerificationRequestModel != null) {
             String clientId = shuftiVerificationRequestModel.getClientId();
             if (clientId == null || clientId.isEmpty()) {
-                returnErrorCallback("ClientId cannot be empty. Please, provide your client id.");
+                returnErrorCallback(getString(R.string.empty_client_id));
                 return;
             }
             String secretKey = shuftiVerificationRequestModel.getSecretKey();
             if (secretKey == null || secretKey.isEmpty()) {
-                returnErrorCallback("Secret key cannot be empty. Please, provide your secret key.");
+                returnErrorCallback(getString(R.string.empty_secret_key));
                 return;
             }
             String reference = shuftiVerificationRequestModel.getReference();
             if (reference == null || reference.isEmpty()) {
-                returnErrorCallback("Reference parameter cannot be empty. Please, provide a unique reference.");
+                returnErrorCallback(getString(R.string.empty_reference));
                 return;
             }
             String country = shuftiVerificationRequestModel.getCountry();
             if (country == null || country.isEmpty()) {
-                returnErrorCallback("County parameter cannot be empty. Please, provide a country name.");
+                returnErrorCallback(getString(R.string.empty_country));
                 return;
             }
             String email = shuftiVerificationRequestModel.getEmail();
             if (email == null || email.isEmpty()) {
-                returnErrorCallback("Email parameter cannot be empty. Please, provide an email address.");
+                returnErrorCallback(getString(R.string.empty_email));
                 return;
             }
-            String callback_url = shuftiVerificationRequestModel.getCallback_url();
+            String callback_url = shuftiVerificationRequestModel.getCallbackUrl();
             if (callback_url == null || callback_url.isEmpty()) {
-                returnErrorCallback("Callback url parameter cannot be empty. Please, provide callback url.");
+                returnErrorCallback(getString(R.string.empty_callback_url));
                 return;
-            }
-            if (!shuftiVerificationRequestModel.isToMakeFaceVerification() && !shuftiVerificationRequestModel.isToPerformDocumentationVerification()
-                    && !shuftiVerificationRequestModel.isToPerformAddressVerification()) {
-                returnErrorCallback("None of verification methods is requested. Please, select one or more verification methods.");
-                return;
-            }
-            //Check if documentation verification is requested and none of supported types is provided
-            if (shuftiVerificationRequestModel.isToPerformDocumentationVerification()) {
-                if (!shuftiVerificationRequestModel.isSupportPassportType() && !shuftiVerificationRequestModel.isSupportDocIdCardType()
-                        && !shuftiVerificationRequestModel.isSupportDrivingLicenseType() && !shuftiVerificationRequestModel.isSupportCreditCardType()) {
-
-                    returnErrorCallback("None of document supported types is selected. Please, provide one or more document type.");
-                    return;
-                }
-            }
-            //Check if Address verification is requested and none of supported types is provided
-            if (shuftiVerificationRequestModel.isToPerformAddressVerification()) {
-                if (!shuftiVerificationRequestModel.isIdCardSupportedType() && !shuftiVerificationRequestModel.isUtilityBillSupportedType()
-                        && !shuftiVerificationRequestModel.isBankStatementSupportedType()) {
-
-                    returnErrorCallback("None of document supported types is selected. Please, provide one or more document type.");
-                    return;
-                }
             }
 
             asyncRequest = shuftiVerificationRequestModel.isAsyncRequest();
         }
 
-        //Making json request object
         try {
 
             requestedObject.put("reference", shuftiVerificationRequestModel.getReference());
             requestedObject.put("country", shuftiVerificationRequestModel.getCountry());
             requestedObject.put("language", shuftiVerificationRequestModel.getLanguage());
             requestedObject.put("email", shuftiVerificationRequestModel.getEmail());
-            requestedObject.put("callback_url", shuftiVerificationRequestModel.getCallback_url());
-            requestedObject.put("redirect_url", shuftiVerificationRequestModel.getRedirect_url());
+            requestedObject.put("callback_url", shuftiVerificationRequestModel.getCallbackUrl());
+            requestedObject.put("redirect_url", shuftiVerificationRequestModel.getRedirectUrl());
             requestedObject.put("verification_mode", "video_only");
 
         } catch (Exception ex) {
@@ -163,64 +164,73 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
 
     public void checkForVerificationRequest() {
 
-        if (shuftiVerificationRequestModel.isToMakeFaceVerification()) {
+        if (shuftiVerificationRequestModel.getFaceVerification() != null && shuftiVerificationRequestModel.getFaceVerification().isFaceVerification()) {
             currentState = Constants.CODE_SELFIE;
             showTutorialFragment();
-            shuftiVerificationRequestModel.setToMakeFaceVerification(false);
+            shuftiVerificationRequestModel.getFaceVerification().setFaceVerification(false);
             return;
         }
-        if (shuftiVerificationRequestModel.isToPerformDocumentationVerification()) {
+        if (shuftiVerificationRequestModel.getDocumentVerification() != null && documentVerification) {
             currentState = Constants.CODE_DOCUMENT;
             setDocumentTypes();
             showTutorialFragment();
-            shuftiVerificationRequestModel.setToPerformDocumentationVerification(false);
+            documentVerification = false;
             return;
         }
-        if (shuftiVerificationRequestModel.isToPerformAddressVerification()) {
+        if (shuftiVerificationRequestModel.getAddressVerification() != null && addressVerification) {
             currentState = Constants.CODE_ADDRESS;
             setAddressTypes();
             showTutorialFragment();
-            shuftiVerificationRequestModel.setToPerformAddressVerification(false);
+            addressVerification = false;
             return;
         }
 
-        //No requests pending hit the api
         if (!requestInProcess) {
             sendRequestToShuftiproServer(requestedObject);
         }
-
-    }
-
-    public static ShuftiVerifyActivity getInstance() {
-        return instance;
     }
 
     private void setDocumentTypes() {
-        if (shuftiVerificationRequestModel.isSupportPassportType()) {
-            docPassport = true;
-        }
-        if (shuftiVerificationRequestModel.isSupportDocIdCardType()) {
-            docIdCard = true;
-        }
-        if (shuftiVerificationRequestModel.isSupportDrivingLicenseType()) {
-            docDrivingLicense = true;
-        }
-        if (shuftiVerificationRequestModel.isSupportCreditCardType()) {
-            docCreditCard = true;
+
+        ArrayList<String> supported_types = shuftiVerificationRequestModel.getDocumentVerification().getSupportedTypes();
+        if (supported_types != null && !supported_types.isEmpty()) {
+            if (supported_types.contains(documentSupportedTypes[0])) {
+                docIdCard = true;
+            }
+            if (supported_types.contains(documentSupportedTypes[1])) {
+                docCreditCard = true;
+            }
+            if (supported_types.contains(documentSupportedTypes[2])) {
+                docPassport = true;
+            }
+            if (supported_types.contains(documentSupportedTypes[3])) {
+                docDrivingLicense = true;
+            }
+        } else {
+            returnErrorCallback(getString(R.string.document_type_no_set));
         }
     }
 
     private void setAddressTypes() {
 
-        if (shuftiVerificationRequestModel.isIdCardSupportedType()) {
-            addressIdCard = true;
+        ArrayList<String> supported_types = shuftiVerificationRequestModel.getAddressVerification().getSupportedTypes();
+        if (supported_types != null && !supported_types.isEmpty()) {
+            if (supported_types.contains(addressSupportedTypes[0])) {
+                addressIdCard = true;
+            }
+            if (supported_types.contains(addressSupportedTypes[1])) {
+                addressUtilityBills = true;
+            }
+            if (supported_types.contains(addressSupportedTypes[2])) {
+                addressBankStatement = true;
+            }
+        } else {
+            returnErrorCallback(getString(R.string.address_type_no_set));
         }
-        if (shuftiVerificationRequestModel.isUtilityBillSupportedType()) {
-            addressUtilityBills = true;
-        }
-        if (shuftiVerificationRequestModel.isBankStatementSupportedType()) {
-            addressBankStatement = true;
-        }
+    }
+
+    public static ShuftiVerifyActivity getInstance() {
+        return instance;
     }
 
     private void sendRequestToShuftiproServer(JSONObject requestedObject) {
@@ -237,13 +247,13 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
 
             try {
 
-                boolean isSubmitted = HttpConnectionHandler.getInstance(clientId, secretKey,asyncRequest).executeVerificationRequest(requestedObject,
+                boolean isSubmitted = HttpConnectionHandler.getInstance(clientId, secretKey, asyncRequest).executeVerificationRequest(requestedObject,
                         ShuftiVerifyActivity.this, ShuftiVerifyActivity.this);
 
                 if (!isSubmitted) {
                     requestInProcess = false;
 
-                    responseSet.put("reference",reference);
+                    responseSet.put("reference", reference);
                     responseSet.put("event", "");
                     responseSet.put("error", "No Internet Connection");
 
@@ -273,13 +283,13 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
 
             try {
 
-                boolean isSubmitted = HttpConnectionHandler.getInstance(clientId, secretKey,asyncRequest).executeVerificationRequest(requestedObject,
+                boolean isSubmitted = HttpConnectionHandler.getInstance(clientId, secretKey, asyncRequest).executeVerificationRequest(requestedObject,
                         ShuftiVerifyActivity.this, ShuftiVerifyActivity.this);
 
                 if (!isSubmitted) {
                     requestInProcess = false;
 
-                    responseSet.put("reference",reference);
+                    responseSet.put("reference", reference);
                     responseSet.put("event", "");
 
                     if (shuftiVerificationRequestModel != null && shuftiVerificationRequestModel.getShuftiVerifyListener() != null) {
@@ -289,7 +299,6 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
 
                 } else {
 
-                    //send callback that request has been sent successfully.
                     requestInProcess = false;
                     Log.e(TAG, "Async Request has been sent.");
                     ShuftiVerifyActivity.this.finish();
@@ -298,12 +307,11 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
             } catch (Exception e) {
                 e.printStackTrace();
             }
-
         }
-
     }
 
     public void showTutorialFragment() {
+
         tutorialFragment = TutorialFragment.newInstance(currentState, docIdCard, docPassport, docDrivingLicense, docCreditCard, addressIdCard, addressUtilityBills, addressBankStatement);
         tutorialFragment.setTutorialFragmentCB(this);
         rlLoadingProgress.setOnClickListener(null);
@@ -378,39 +386,26 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
 
     private void makeDocumentObject(String encodedBase64String) {
         JSONObject documentationObject = new JSONObject();
-        ArrayList<String> doc_supported_types = new ArrayList<String>();
-
-        if (shuftiVerificationRequestModel.isSupportPassportType()) {
-            doc_supported_types.add("passport");
-        }
-        if (shuftiVerificationRequestModel.isSupportDocIdCardType()) {
-            doc_supported_types.add("id_card");
-        }
-        if (shuftiVerificationRequestModel.isSupportDrivingLicenseType()) {
-            doc_supported_types.add("driving_license");
-        }
-        if (shuftiVerificationRequestModel.isSupportCreditCardType()) {
-            doc_supported_types.add("credit_or_debit_card");
-        }
+        ArrayList<String> doc_supported_types = shuftiVerificationRequestModel.getDocumentVerification().getSupportedTypes();
 
         try {
             documentationObject.put("proof", Constants.VIDEO_PREFIX_FOR_SERVER + encodedBase64String);
             documentationObject.put("supported_types", new JSONArray(doc_supported_types));
 
             //Set parameter in the requested object if OCR is required.
-            if (shuftiVerificationRequestModel.isDocumentName()) {
+            if (shuftiVerificationRequestModel.getDocumentVerification().isExtractName()) {
                 documentationObject.put("name", "");
             }
-            if (shuftiVerificationRequestModel.isDob()) {
+            if (shuftiVerificationRequestModel.getDocumentVerification().isExtractDob()) {
                 documentationObject.put("dob", "");
             }
-            if (shuftiVerificationRequestModel.isDocumentNumber()) {
+            if (shuftiVerificationRequestModel.getDocumentVerification().isExtractDocumentNumber()) {
                 documentationObject.put("document_number", "");
             }
-            if (shuftiVerificationRequestModel.isExpiryDate()) {
+            if (shuftiVerificationRequestModel.getDocumentVerification().isExtractExpiryDate()) {
                 documentationObject.put("expiry_date", "");
             }
-            if (shuftiVerificationRequestModel.isIssueDate()) {
+            if (shuftiVerificationRequestModel.getDocumentVerification().isExtractIssueDate()) {
                 documentationObject.put("issue_date", "");
             }
             requestedObject.put("document", documentationObject);
@@ -421,26 +416,14 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
 
     private void makeAddressObject(String encodedBase64String) {
         JSONObject addressObject = new JSONObject();
-        ArrayList<String> address_supported_types = new ArrayList<String>();
-
-        if (shuftiVerificationRequestModel.isIdCardSupportedType()) {
-            address_supported_types.add("id_card");
-        }
-        if (shuftiVerificationRequestModel.isUtilityBillSupportedType()) {
-            address_supported_types.add("utility_bill");
-        }
-        if (shuftiVerificationRequestModel.isBankStatementSupportedType()) {
-            address_supported_types.add("bank_statement");
-        }
-
+        ArrayList<String> address_supported_types = shuftiVerificationRequestModel.getAddressVerification().getSupportedTypes();
 
         try {
-
             addressObject.put("proof", Constants.VIDEO_PREFIX_FOR_SERVER + encodedBase64String);
-            if (shuftiVerificationRequestModel.isFullAddress()) {
+            if (shuftiVerificationRequestModel.getAddressVerification().isExtractFullAddress()) {
                 addressObject.put("full_address", "");
             }
-            if (shuftiVerificationRequestModel.isAddressDocumentName()) {
+            if (shuftiVerificationRequestModel.getAddressVerification().isExtractName()) {
                 addressObject.put("name", "");
             }
 
@@ -453,14 +436,13 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
 
     @Override
     public void successResponse(String result) {
+
         requestInProcess = false;
         responseSet.clear();
 
         try {
 
             JSONObject jsonObject = new JSONObject(result);
-
-            //Starting api response parsing
             String reference = "";
             String event = "";
             String error = "";
@@ -519,7 +501,6 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
                 }
             }
 
-            //Putting response in hash map
             responseSet.put("reference", reference);
             responseSet.put("event", event);
             responseSet.put("error", error);
@@ -567,11 +548,11 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
         } catch (JSONException e) {
             e.printStackTrace();
         }
-
     }
 
     @Override
     public void errorResponse(String response) {
+
         requestInProcess = false;
         responseSet.clear();
 
@@ -579,12 +560,9 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
             return;
         }
 
-        //Putting response in hash map
         try {
 
             JSONObject jsonObject = new JSONObject(response);
-
-            //Starting api response parsing
             String reference = "";
             String event = "";
             String error = "";
@@ -644,7 +622,6 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
                 }
             }
 
-            //Putting response in hash map
             responseSet.put("reference", reference);
             responseSet.put("event", event);
             responseSet.put("error", error);
@@ -673,7 +650,7 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
                     }
                 });
 
-            }else {
+            } else {
 
                 if (shuftiVerificationRequestModel != null && shuftiVerificationRequestModel.getShuftiVerifyListener() != null) {
                     shuftiVerificationRequestModel.getShuftiVerifyListener().verificationStatus(responseSet);
@@ -685,12 +662,12 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
         } catch (JSONException e) {
             e.printStackTrace();
         }
-
     }
 
-    //Overrided back pressed method to stop user from quitting acciendently
+    //Override back pressed method to stop user from quitting accindently
     @Override
     public void onBackPressed() {
+
         AlertDialog.Builder alertClose = new AlertDialog.Builder(this);
         alertClose.setMessage("Are you sure you want to close verification process ?");
         alertClose.setPositiveButton("Yes", new DialogInterface.OnClickListener() {
@@ -703,8 +680,6 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
 
         alertClose.setNegativeButton("No", null);
         alertClose.show();
-
-
     }
 
     private void showDialog(String title, String message, View.OnClickListener clickListener) {
@@ -735,7 +710,6 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
                 alertDialog = dialogBuilder.create();
                 alertDialog.setCancelable(false);
                 alertDialog.show();
-
             }
         });
 
@@ -743,7 +717,8 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[], @NonNull int[] grantResults) {
+    public void onRequestPermissionsResult(int requestCode, @NonNull String permissions[],
+                                           @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
 
         switch (requestCode) {
@@ -751,17 +726,14 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
 
                 Map<String, Integer> perms = new HashMap<>();
 
-                // Initialize the map with both permissions
                 perms.put(Manifest.permission.CAMERA, PackageManager.PERMISSION_GRANTED);
                 perms.put(Manifest.permission.WRITE_EXTERNAL_STORAGE, PackageManager.PERMISSION_GRANTED);
                 perms.put(Manifest.permission.RECORD_AUDIO, PackageManager.PERMISSION_GRANTED);
 
-                // Fill with actual results from user
                 if (grantResults.length > 0) {
                     for (int i = 0; i < permissions.length; i++)
                         perms.put(permissions[i], grantResults[i]);
 
-                    // Check for all permissions
                     if (perms.get(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED
                             && perms.get(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED
                             && perms.get(Manifest.permission.RECORD_AUDIO) == PackageManager.PERMISSION_GRANTED) {
@@ -772,7 +744,6 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
                 }
             }
         }
-
     }
 
     private void returnErrorCallback(String error) {
@@ -789,6 +760,40 @@ public class ShuftiVerifyActivity extends AppCompatActivity implements TutorialF
     protected void onDestroy() {
         super.onDestroy();
         instance = null;
+
+        try {
+            trimCache(this);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    public static void trimCache(Context context) {
+        try {
+            File dir = context.getCacheDir();
+            if (dir != null && dir.isDirectory()) {
+                deleteDir(dir);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static boolean deleteDir(File dir) {
+        if (dir != null && dir.isDirectory()) {
+            String[] children = dir.list();
+            for (String aChildren : children) {
+                boolean success = deleteDir(new File(dir, aChildren));
+                if (!success) {
+                    return false;
+                }
+            }
+        }
+
+        // The directory is now empty so delete it
+        assert dir != null;
+        return dir.delete();
     }
 }
 
